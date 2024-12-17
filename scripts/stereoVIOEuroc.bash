@@ -13,7 +13,7 @@ DATASET_TYPE=0
 USE_LCD=0
 
 # Specify: 1 to enable logging of output files, 0 to not.
-LOG_OUTPUT=0
+LOG_OUTPUT=1
 ###################################################################
 
 ###################################################################
@@ -24,7 +24,7 @@ LOG_OUTPUT=0
 BUILD_PATH="../build"
 
 # Params path: specify where the parameters for Kimera are.
-PARAMS_PATH="../params/Euroc"
+PARAMS_PATH="../params/EurocMono"
 # PARAMS_PATH="../params/EurocMono"  # use this for monocular-mode (left cam only)
 
 # Vocabulary path: specify where the vocabulary for loop closure is.
