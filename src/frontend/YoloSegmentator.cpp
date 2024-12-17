@@ -4,6 +4,30 @@
 
 namespace yolo
 {
+
+
+bool YoloSegmentator::isKeyPointInSegmentedPart(const cv::Point2f& keypoint, const std::vector<yolo::Obj>& objs) {
+    int x = static_cast<int>(keypoint.x);
+    int y = static_cast<int>(keypoint.y);
+
+    for (const auto& obj : objs) {
+        if (obj.bound.contains(cv::Point(x, y))) {
+            // Resize mask to match bounding box size
+            cv::Mat resizedMask;
+            cv::resize(obj.mask, resizedMask, obj.bound.size(), 0, 0, cv::INTER_LINEAR);
+
+            int mask_x = x - obj.bound.x;
+            int mask_y = y - obj.bound.y;
+
+            if (mask_x >= 0 && mask_x < resizedMask.cols && mask_y >= 0 && mask_y < resizedMask.rows) {
+                if (resizedMask.at<uchar>(mask_y, mask_x) > 0) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
     
 YoloSegmentator::YoloSegmentator(string& mpath, string model_name) {
     env = new Env(OrtLoggingLevel::ORT_LOGGING_LEVEL_ERROR, model_name.c_str());

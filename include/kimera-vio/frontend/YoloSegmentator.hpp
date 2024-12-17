@@ -49,6 +49,8 @@ namespace yolo{
 
         bool segment(const Mat& img, vector<Obj>& objs);
 
+        bool isKeyPointInSegmentedPart(const cv::Point2f& keypoint, const std::vector<yolo::Obj>& objs);
+
         private:
             const int SEG_CH = 32;
             const int SEG_W = 160, SEG_H = 160;

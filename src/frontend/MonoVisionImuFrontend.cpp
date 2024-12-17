@@ -204,6 +204,7 @@ MonoFrontendOutput::UniquePtr MonoVisionImuFrontend::nominalSpinMono(
   }
 }
 
+
 void MonoVisionImuFrontend::processFirstFrame(const Frame& first_frame) {
   VLOG(2) << "Processing first mono frame \n";
   mono_frame_k_ = std::make_shared<Frame>(first_frame);
@@ -221,6 +222,29 @@ void MonoVisionImuFrontend::processFirstFrame(const Frame& first_frame) {
   mono_camera_->undistortKeypoints(mono_frame_k_->keypoints_,
                                    &mono_frame_k_->keypoints_undistorted_);
 
+  std::vector<yolo::Obj> objs;
+
+  cv::Mat img = first_frame.color_img_.clone();
+  yolo_segmentator->segment(img, objs);
+  
+  for(auto keypoint = mono_frame_k_->keypoints_.begin(); keypoint != mono_frame_k_->keypoints_.end();)
+  {
+    if(yolo_segmentator->isKeyPointInSegmentedPart(*keypoint, objs))
+    {
+      mono_frame_k_->keypoints_.erase(keypoint);
+      mono_frame_k_->scores_.erase(mono_frame_k_->scores_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
+      mono_frame_k_->keypoints_undistorted_.erase(mono_frame_k_->keypoints_undistorted_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
+      //remove corresponding landmark
+      mono_frame_k_->landmarks_.erase(mono_frame_k_->landmarks_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
+      mono_frame_k_->landmarks_age_.erase(mono_frame_k_->landmarks_age_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
+      mono_frame_k_->versors_.erase(mono_frame_k_->versors_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
+    }
+    else
+    {
+      keypoint++;
+    }
+  }
+
   // TODO(marcus): get 3d points if possible?
   mono_frame_km1_ = mono_frame_k_;
   mono_frame_lkf_ = mono_frame_k_;
@@ -230,27 +254,6 @@ void MonoVisionImuFrontend::processFirstFrame(const Frame& first_frame) {
   imu_frontend_->resetIntegrationWithCachedBias();
 }
 
-
-bool isKeyPointInSegmentedPart(const cv::Point2f& keypoint, const std::vector<yolo::Obj>& objs) {
-    // Get the coordinates of the keypoint
-    int x = keypoint.x;
-    int y = keypoint.y;
-
-    for (const auto& obj : objs) {
-        // Check if the keypoint is within the bounds of the segmentation mask
-        std::cout << "Object: " << obj.mask.cols << " " << obj.mask.rows << std::endl;
-        
-        std::cout << "Keypoint: " << x << " " << y << std::endl;
-
-
-        if (x >= 0 && x < obj.mask.cols && y >= 0 && y < obj.mask.rows) {
-            // Check if the keypoint lies inside the segmented part
-         return true;
-          
-        }
-    }
-    return false;
-}
 
 StatusMonoMeasurementsPtr MonoVisionImuFrontend::processFrame(
     const Frame& cur_frame,
@@ -318,25 +321,21 @@ StatusMonoMeasurementsPtr MonoVisionImuFrontend::processFrame(
     feature_detector_->featureDetection(mono_frame_k_.get());
 
 
+
+
+
+    // Undistort keypoints:
+    mono_camera_->undistortKeypoints(mono_frame_k_->keypoints_,
+                                     &mono_frame_k_->keypoints_undistorted_);
+
     //Remove person keypoints if needed.
-
     std::vector<yolo::Obj> objs;
-
     cv::Mat img = cur_frame.color_img_.clone();
-    
-    // std::string output_image_path = "/home/ak/image_" + std::to_string(image_counter_) + ".png";
-    // cv::imwrite(output_image_path, img);
-    // std::cout << "Image saved to " << output_image_path << std::endl;
-    // ++image_counter_;  // Increment the counter for the next image
-
-
     yolo_segmentator->segment(img, objs);
     
-    // NNUMBER OF KEYPOINTS
-    std::cout << "Number of keypoints: " << mono_frame_k_->keypoints_.size() << std::endl;
     for(auto keypoint = mono_frame_k_->keypoints_.begin(); keypoint != mono_frame_k_->keypoints_.end();)
     {
-      if(isKeyPointInSegmentedPart(*keypoint, objs))
+      if(yolo_segmentator->isKeyPointInSegmentedPart(*keypoint, objs))
       {
         mono_frame_k_->keypoints_.erase(keypoint);
         mono_frame_k_->scores_.erase(mono_frame_k_->scores_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
@@ -345,19 +344,14 @@ StatusMonoMeasurementsPtr MonoVisionImuFrontend::processFrame(
         mono_frame_k_->landmarks_.erase(mono_frame_k_->landmarks_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
         mono_frame_k_->landmarks_age_.erase(mono_frame_k_->landmarks_age_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
         mono_frame_k_->versors_.erase(mono_frame_k_->versors_.begin() + (keypoint - mono_frame_k_->keypoints_.begin()));
-        std::cout << "Erased keypoint" << std::endl;
       }
       else
       {
-        std::cout << "Kept keypoint" << std::endl;
         keypoint++;
       }
     }
 
 
-    // Undistort keypoints:
-    mono_camera_->undistortKeypoints(mono_frame_k_->keypoints_,
-                                     &mono_frame_k_->keypoints_undistorted_);
     // Log images if needed.
     if (logger_ &&
         (FLAGS_visualize_frontend_images || FLAGS_save_frontend_images)) {
