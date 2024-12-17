@@ -851,7 +851,8 @@ bool MonoEurocDataProvider::spinOnce() {
                                 // the camera... not all the time here...
                                 left_cam_info,
                                 UtilsOpenCV::ReadAndConvertToGrayScale(
-                                    left_img_filename, equalize_image)));
+                                    left_img_filename, equalize_image),
+                                    cv::imread(left_img_filename)));
   } else {
     LOG(ERROR) << "Missing left image, proceeding to the next one.";
   }

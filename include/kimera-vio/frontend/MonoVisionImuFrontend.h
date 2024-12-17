@@ -29,6 +29,7 @@
 #include "kimera-vio/utils/Timer.h"
 #include "kimera-vio/visualizer/Display-definitions.h"
 #include "kimera-vio/visualizer/Visualizer3D-definitions.h"
+#include "kimera-vio/frontend/YoloSegmentator.hpp"
 
 namespace VIO {
 
@@ -37,6 +38,8 @@ class MonoVisionImuFrontend : public VisionImuFrontend {
   KIMERA_POINTER_TYPEDEFS(MonoVisionImuFrontend);
   KIMERA_DELETE_COPY_CONSTRUCTORS(MonoVisionImuFrontend);
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+  yolo::YoloSegmentator* yolo_segmentator;
 
  public:
   MonoVisionImuFrontend(
@@ -104,6 +107,9 @@ class MonoVisionImuFrontend : public VisionImuFrontend {
   FeatureDetector::UniquePtr feature_detector_;
 
   Camera::ConstPtr mono_camera_;
+
+      int image_counter_ = 0;  // Add a counter for image filenames
+
 };
 
 }  // namespace VIO

@@ -23,6 +23,8 @@ target_sources(kimera_vio
   "${CMAKE_CURRENT_LIST_DIR}/VisionImuFrontendModule.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/VisionImuFrontendParams.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/VisionImuTrackerParams.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/YoloSegmentator.cpp"
+
 )
 
 add_subdirectory(feature-detector)

@@ -53,11 +53,13 @@ class Frame : public PipelinePayload {
   Frame(const FrameId& id,
         const Timestamp& timestamp,
         const CameraParams& cam_param,
-        const cv::Mat& img)
+        const cv::Mat& img,
+        const cv::Mat& color_img = cv::Mat()) 
       : PipelinePayload(timestamp),
         id_(id),
         cam_param_(cam_param),
         img_(img),
+        color_img_(color_img),
         isKeyframe_(false),
         keypoints_(),
         keypoints_undistorted_(),
@@ -74,6 +76,7 @@ class Frame : public PipelinePayload {
         id_(frame.id_),
         cam_param_(frame.cam_param_),
         img_(frame.img_),
+        color_img_(frame.color_img_),
         isKeyframe_(frame.isKeyframe_),
         keypoints_(frame.keypoints_),
         keypoints_undistorted_(frame.keypoints_undistorted_),
@@ -167,6 +170,8 @@ class Frame : public PipelinePayload {
   // This must be const otw, we have to reimplement the copy ctor to allow
   // for deep copies.
   const cv::Mat img_;
+
+  const cv::Mat color_img_;  // Optional color image.
 
   // Results of image processing.
   bool isKeyframe_ = false;
