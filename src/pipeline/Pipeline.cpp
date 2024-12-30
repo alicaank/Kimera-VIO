@@ -340,6 +340,11 @@ void Pipeline::launchThreads() {
           &MesherModule::spin, CHECK_NOTNULL(mesher_module_.get()));
     }
 
+    if(mesher_module_mono_) {
+      mesher_thread_ = std::make_unique<std::thread>(
+          &MesherModuleMono::spin, CHECK_NOTNULL(mesher_module_mono_.get()));
+    }
+
     if (lcd_module_) {
       lcd_thread_ = std::make_unique<std::thread>(
           &LcdModule::spin, CHECK_NOTNULL(lcd_module_.get()));
@@ -369,6 +374,7 @@ void Pipeline::stopThreads() {
   vio_frontend_module_->shutdown();
 
   if (mesher_module_) mesher_module_->shutdown();
+  if (mesher_module_mono_) mesher_module_mono_->shutdown();
   if (lcd_module_) lcd_module_->shutdown();
   if (visualizer_module_) visualizer_module_->shutdown();
   if (display_module_) {

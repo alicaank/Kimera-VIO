@@ -238,6 +238,28 @@ MesherOutput::UniquePtr Mesher::spinOnce(const MesherInput& input) {
   return mesher_output_payload;
 }
 
+MesherOutput::UniquePtr Mesher::spinOnceMono(const MesherInputMono& input) {
+  MesherOutput::UniquePtr mesher_output_payload =
+      std::make_unique<MesherOutput>(input.timestamp_);
+  updateMesh3DMono(
+      input,
+      // TODO REMOVE THIS FLAG MAKE MESH_2D Optional!
+      FLAGS_return_mesh_2d ? &(mesher_output_payload->mesh_2d_) : nullptr,
+      // These are more or less
+      // the same info as mesh_2d_
+      &(mesher_output_payload->mesh_2d_for_viz_));
+  // Serialize 2D/3D Mesh if requested
+  if (serialize_meshes_) {
+    LOG_FIRST_N(WARNING, 1) << "Mesh serialization enabled.";
+    serializeMeshes();
+  }
+  // TODO(Toni): remove these calls, since all info is in mesh_3d_...
+  getVerticesMesh(&(mesher_output_payload->vertices_mesh_));
+  getPolygonsMesh(&(mesher_output_payload->polygons_mesh_));
+  mesher_output_payload->mesh_3d_ = mesh_3d_;
+  return mesher_output_payload;
+}
+
 std::vector<cv::Vec6f> Mesher::computeDelaunayTriangulation(
     const KeypointsCV& keypoints,
     MeshIndices* vtx_indices) {
@@ -1512,6 +1534,8 @@ void Mesher::updateMesh3D(const PointsWithIdMap& points_with_id_VIO,
   VLOG(10) << "Finished updateMesh3D.";
 }
 
+
+
 /* -------------------------------------------------------------------------- */
 // Update mesh, but in a thread-safe way.
 // TODO(TONI): this seems completely unnecessary
@@ -1537,6 +1561,48 @@ void Mesher::updateMesh3D(const MesherInput& mesher_payload,
                    mesher_params_.B_Pose_camLrect_),
                mesh_2d,
                mesh_2d_for_viz);
+}
+
+void Mesher::updateMesh3DMono(const MesherInputMono& mesher_payload,
+                          Mesh2D* mesh_2d,
+                          std::vector<cv::Vec6f>* mesh_2d_for_viz) {
+  const Frame& mono_frame =
+      mesher_payload.frontend_output_->frame_lkf_;
+  const StatusKeypointsCV& status_keypoints =
+      mono_frame.keypoints_undistorted_;
+  std::vector<KeypointStatus> left_keypoint_status;
+  left_keypoint_status.reserve(status_keypoints.size());
+  for (const StatusKeypointCV& kpt : status_keypoints) {
+    left_keypoint_status.push_back(kpt.first);
+  }
+
+  BearingVectors keypoints_3d;
+  for(auto& lmk : mesher_payload.backend_output_->landmarks_with_id_map_) {
+    keypoints_3d.push_back(mono_frame.versors_[lmk.first] * lmk.second.z() / mono_frame.versors_[lmk.first][2]);
+  }
+
+  if (keypoints_3d.size() == 0) {
+    updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
+               mono_frame.keypoints_,
+               left_keypoint_status,
+               mono_frame.versors_,
+               mono_frame.landmarks_,
+               mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
+                   mesher_params_.B_Pose_camLrect_),
+               mesh_2d,
+               mesh_2d_for_viz);
+  }
+  else{
+    updateMesh3D(mesher_payload.backend_output_->landmarks_with_id_map_,
+                mono_frame.keypoints_,
+                left_keypoint_status,
+                keypoints_3d,
+                mono_frame.landmarks_,
+                mesher_payload.backend_output_->W_State_Blkf_.pose_.compose(
+                    mesher_params_.B_Pose_camLrect_),
+                mesh_2d,
+                mesh_2d_for_viz);
+  }
 }
 
 /* -------------------------------------------------------------------------- */

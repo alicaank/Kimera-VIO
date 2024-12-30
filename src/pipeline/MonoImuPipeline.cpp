@@ -151,10 +151,35 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
                 std::cref(*CHECK_NOTNULL(vio_frontend_module_.get())),
                 std::placeholders::_1));
 
+    if (static_cast<VisualizationType>(FLAGS_viz_type) ==
+        VisualizationType::kMesh2dTo3dSparse) {
+    mesher_module_mono_ = std::make_unique<MesherModuleMono>(
+        parallel_run_,
+        MesherFactory::createMesher(
+            MesherType::PROJECTIVE,
+            MesherParams(camera_->getBodyPoseCam(),
+                        params.camera_params_.at(0u).image_size_)));
+        //! Register input callbacks
+        vio_backend_module_->registerOutputCallback(
+            std::bind(&MesherModuleMono::fillBackendQueue,
+                    std::ref(*CHECK_NOTNULL(mesher_module_mono_.get())),
+                    std::placeholders::_1));
+
+        auto& mesher_module = mesher_module_mono_;
+        vio_frontend_module_->registerOutputCallback(
+            [&mesher_module](const FrontendOutputPacketBase::Ptr& output) {
+            auto converted_output =
+                std::dynamic_pointer_cast<MonoFrontendOutput>(output);
+            CHECK(converted_output);
+            CHECK_NOTNULL(mesher_module.get())
+                ->fillFrontendQueue(converted_output);
+            });
+    }
+
   // TOOD(marcus): enable use of mesher for mono pipeline
   // if (static_cast<VisualizationType>(FLAGS_viz_type) ==
   //     VisualizationType::kMesh2dTo3dSparse) {
-  //   mesher_module_ = std::make_unique<MesherModule>(
+  //   mesher_module_mono_ = std::make_unique<MesherModule>(
   //       parallel_run_,
   //       MesherFactory::createMesher(
   //           MesherType::PROJECTIVE,
@@ -164,14 +189,15 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
   //   //! Register input callbacks
   //   vio_backend_module_->registerOutputCallback(
   //       std::bind(&MesherModule::fillBackendQueue,
-  //                 std::ref(*CHECK_NOTNULL(mesher_module_.get())),
+  //                 std::ref(*CHECK_NOTNULL(mesher_module_mono_.get())),
   //                 std::placeholders::_1));
 
   //   vio_frontend_module_->registerOutputCallback(
   //       std::bind(&MesherModule::fillFrontendQueue,
-  //                 std::ref(*CHECK_NOTNULL(mesher_module_.get())),
+  //                 std::ref(*CHECK_NOTNULL(mesher_module_mono_.get())),
   //                 std::placeholders::_1));
   // }
+
 
   if (FLAGS_use_lcd) {
     lcd_module_ = std::make_unique<LcdModule>(
@@ -230,12 +256,16 @@ MonoImuPipeline::MonoImuPipeline(const VioParams& params,
               ->fillFrontendQueue(converted_output);
         });
 
-    // if (mesher_module_) {
-    //   mesher_module_->registerOutputCallback(
-    //       std::bind(&VisualizerModule::fillMesherQueue,
-    //                 std::ref(*CHECK_NOTNULL(visualizer_module_.get())),
-    //                 std::placeholders::_1));
-    // }
+
+    if (mesher_module_mono_) {
+    LOG(INFO) << "Registering Mesher output callback.";
+    mesher_module_mono_->registerOutputCallback(
+        std::bind(&VisualizerModule::fillMesherQueue,
+                    std::ref(*CHECK_NOTNULL(visualizer_module_.get())),
+                    std::placeholders::_1));
+    }
+    
+
 
     //! Actual displaying of visual data is done in the main thread.
     CHECK(params.display_params_);

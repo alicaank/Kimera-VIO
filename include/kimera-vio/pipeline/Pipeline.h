@@ -31,6 +31,7 @@
 #include "kimera-vio/frontend/VisionImuFrontendModule.h"
 #include "kimera-vio/loopclosure/LcdModule.h"
 #include "kimera-vio/mesh/MesherModule.h"
+#include "kimera-vio/mesh/MesherModuleMono.h"
 #include "kimera-vio/utils/ThreadsafeQueue.h"
 #include "kimera-vio/visualizer/Display.h"
 #include "kimera-vio/visualizer/DisplayModule.h"
@@ -277,6 +278,9 @@ class Pipeline {
 
   //! Mesher
   MesherModule::UniquePtr mesher_module_;
+
+  //! Mesher Mono
+  MesherModuleMono::UniquePtr mesher_module_mono_;
 
   //! Loop Closure Detector
   LcdModule::UniquePtr lcd_module_;

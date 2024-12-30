@@ -26,6 +26,7 @@
 #include "kimera-vio/mesh/Mesh.h"
 #include "kimera-vio/pipeline/Pipeline-definitions.h"
 #include "kimera-vio/utils/Macros.h"
+#include "kimera-vio/frontend/MonoVisionImuFrontend-definitions.h"
 
 namespace VIO {
 
@@ -96,6 +97,31 @@ struct MesherInput : public PipelinePayload {
 
   // Copy the pointers so that we do not need to copy the data.
   const StereoFrontendOutput::ConstPtr frontend_output_;
+  const BackendOutput::ConstPtr backend_output_;
+};
+
+struct MesherInputMono : public PipelinePayload {
+ public:
+  KIMERA_POINTER_TYPEDEFS(MesherInputMono);
+  KIMERA_DELETE_COPY_CONSTRUCTORS(MesherInputMono);
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+  // Copy the pointers so that we do not need to copy the data, we will
+  // reference to it via the copied pointers.
+  MesherInputMono(const Timestamp& timestamp,
+              const MonoFrontendOutput::Ptr& frontend_payload,
+              const BackendOutput::Ptr& backend_payload)
+      : PipelinePayload(timestamp),
+        frontend_output_(frontend_payload),
+        backend_output_(backend_payload) {
+    CHECK(frontend_payload);
+    CHECK(backend_payload);
+    CHECK_EQ(timestamp, frontend_payload->timestamp_);
+    CHECK_EQ(timestamp, backend_payload->timestamp_);
+  }
+  virtual ~MesherInputMono() = default;
+
+  // Copy the pointers so that we do not need to copy the data.
+  const MonoFrontendOutput::ConstPtr frontend_output_;
   const BackendOutput::ConstPtr backend_output_;
 };
 

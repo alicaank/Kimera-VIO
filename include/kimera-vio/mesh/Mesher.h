@@ -54,6 +54,8 @@ class Mesher {
    * @return Mesher's output
    */
   virtual MesherOutput::UniquePtr spinOnce(const MesherInput& input);
+  virtual MesherOutput::UniquePtr spinOnceMono(const MesherInputMono& input);
+
 
  public:
   // Update mesh: update structures keeping memory of the map before
@@ -78,6 +80,11 @@ class Mesher {
   /* ------------------------------------------------------------------------ */
   // Update mesh, but in a thread-safe way.
   void updateMesh3D(const MesherInput& mesher_payload,
+                    Mesh2D* mesh_2d = nullptr,
+                    std::vector<cv::Vec6f>* mesh_2d_for_viz = nullptr);
+
+  // Update mesh, but in a thread-safe way.
+  void updateMesh3DMono(const MesherInputMono& mesher_payload,
                     Mesh2D* mesh_2d = nullptr,
                     std::vector<cv::Vec6f>* mesh_2d_for_viz = nullptr);
 
